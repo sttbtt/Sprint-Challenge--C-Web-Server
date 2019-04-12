@@ -49,6 +49,18 @@ urlinfo_t *parse_url(char *url)
   // IMPLEMENT ME! //
   ///////////////////
 
+  char *backslash = strchr(hostname, '/');
+  path = backslash + 1;
+  *backslash = '\0';
+
+  char *colon = strchr(hostname, ':');
+  port = colon + 1;
+  *colon = '\0';
+
+  urlinfo -> hostname = hostname;
+  urlinfo -> port = port;
+  urlinfo -> path = path;
+
   return urlinfo;
 }
 
@@ -72,7 +84,15 @@ int send_request(int fd, char *hostname, char *port, char *path)
   // IMPLEMENT ME! //
   ///////////////////
 
-  return 0;
+  int req_len = sprintf(request, "GET /%s HTTP/1.1\nHost: %s:%s\nConnection: close\n\n", path, hostname, port);
+
+  rv = send(fd, request, req_len, 0);
+
+  if (rv < 0) {
+    perror("Error sending request");
+  }
+
+  return rv;
 }
 
 int main(int argc, char *argv[])
@@ -80,7 +100,7 @@ int main(int argc, char *argv[])
   int sockfd, numbytes;  
   char buf[BUFSIZE];
 
-  if (argc != 2) {
+  if (argc < 2) {
     fprintf(stderr,"usage: client HOSTNAME:PORT/PATH\n");
     exit(1);
   }
@@ -97,5 +117,25 @@ int main(int argc, char *argv[])
   // IMPLEMENT ME! //
   ///////////////////
 
+  urlinfo_t *urlinfo = parse_url(argv[1]);
+  sockfd = get_socket(urlinfo->hostname, urlinfo->port);
+  send_request(sockfd, urlinfo->hostname, urlinfo->port, urlinfo->path);
+
+  // if (argc == 3){
+  //   if (strcmp(argv[2], "-h")) {
+  //     numbytes = recv(sockfd, buf, BUFSIZE - 1, 0);
+  //     char *content = strstr(buf, "\r\n\r\n");
+  //     printf("%s\n\n", content +=3);
+  //   }
+  // }
+  
+  while ((numbytes = recv(sockfd, buf, BUFSIZE - 1, 0)) > 0) {
+    printf("%s\n\n", buf);
+  }
+
+  close(sockfd);
+  free(urlinfo);
+
   return 0;
 }
+
